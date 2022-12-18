@@ -103,7 +103,23 @@ class DragControls extends EventDispatcher {
 
 				if ( _intersections.length > 0 ) {
 
-					const object = _intersections[ 0 ].object;
+					let object = _intersections[ 0 ].object;
+
+					let temp = object;
+
+					if(temp !== null && temp.draggable !== true){
+						while (temp.parent !== null ) {
+							temp = temp.parent;
+		
+							if(temp.draggable === true){
+								break;
+							}
+						}
+		
+						if(temp.draggable === true){
+							object = temp;
+						}
+					}
 
 					_plane.setFromNormalAndCoplanarPoint( _camera.getWorldDirection( _plane.normal ), _worldPosition.setFromMatrixPosition( object.matrixWorld ) );
 
@@ -156,6 +172,22 @@ class DragControls extends EventDispatcher {
 			if ( _intersections.length > 0 ) {
 
 				_selected = ( scope.transformGroup === true ) ? _objects[ 0 ] : _intersections[ 0 ].object;
+
+				let temp = _selected;
+
+				if(temp !== null && temp.draggable !== true){
+					while (temp.parent !== null ) {
+						temp = temp.parent;
+	
+						if(temp.draggable === true){
+							break;
+						}
+					}
+	
+					if(temp.draggable === true){
+						_selected = temp;
+					}
+				}
 
 				_plane.setFromNormalAndCoplanarPoint( _camera.getWorldDirection( _plane.normal ), _worldPosition.setFromMatrixPosition( _selected.matrixWorld ) );
 

@@ -4,22 +4,35 @@ import * as dat from 'dat.gui';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import laminate2 from '../img/gray-parquet.jpg';
 import { VRButton } from './VRButton';
-import { DragControls } from './controls/DragControls';
+import { DragControls } from './controls/DragControls.js';
+import * as CANNON from 'cannon-es';
 
 const assetLoader = new GLTFLoader();
 const textureLoader = new THREE.TextureLoader()
 const gui = new dat.GUI();
 
+// setup world
+const world = new CANNON.World();
+world.gravity.set(0, -9.82, 0)
+world.broadphase = new CANNON.NaiveBroadphase()
+world.solver.iterations = 10
+world.allowSleep = true
+
+// assets
 const diningRoomUrl = new URL('../assets/modern_dining_room.glb', import.meta.url);
-const chairUrl = new URL('../assets/the_matrix_red_chesterfield_chair.glb', import.meta.url);
 const armchairUrl = new URL('../assets/high_poly_sofa.glb', import.meta.url);
 const sofaUrl = new URL('../assets/chesterfield-sofa.glb', import.meta.url);
-const sofa2Url = new URL('../assets/victorian_style_sofa.glb', import.meta.url);
 const windowUrl = new URL('../assets/wooden_window.glb', import.meta.url);
 const tableUrl = new URL('../assets/table.glb', import.meta.url);
 const sofa3Url = new URL('../assets/victorian_lounge_sofa.glb', import.meta.url);
 const televisionunitUrl = new URL('../assets/14835_tv_stand_inlay_version.glb', import.meta.url);
 const victorianDeskUrl = new URL('../assets/victorian_desk_with_props.glb', import.meta.url);
+
+// let draggableModel;
+// let clickMouse = new THREE.Vector2();
+// let moveMouse = new THREE.Vector2();
+let objects = [];
+
 assetLoader.load(diningRoomUrl.href, function (gltf) {
     const model = gltf.scene;
     scene.add(model);
@@ -58,18 +71,35 @@ assetLoader.load(televisionunitUrl.href, function (gltf) {
 }, undefined, function (error) {
     console.error(error);
 });
-let victorianDeskArray = [];
+
+let victorianDeskShape;
+let vicorianDeskBody;
+let victorianDesk;
 
 assetLoader.load(victorianDeskUrl.href, function (gltf) {
-    const model = gltf.scene;
-    scene.add(model);
-    model.scale.x = 2
-    model.scale.y = 2
-    model.scale.z = 2
-    model.position.set(-9, 0, 9);
-    victorianDeskArray.push(model);
+    victorianDesk = gltf.scene;
+    victorianDesk.scale.x = 2
+    victorianDesk.scale.y = 2
+    victorianDesk.scale.z = 2
+    victorianDesk.position.set(-9, 1, 9);
+    victorianDesk.isDraggable = true;
+    scene.add(victorianDesk);
+    
+    console.log(victorianDesk);
 
-    mixer = new THREE.AnimationMixer(model);
+    victorianDeskShape = new CANNON.Box(new CANNON.Vec3(1, 1, 1))
+    vicorianDeskBody = new CANNON.Body({ mass: 1 })
+    vicorianDeskBody.addShape(victorianDeskShape)
+    vicorianDeskBody.position.x = victorianDesk.position.x
+    vicorianDeskBody.position.y = victorianDesk.position.y
+    vicorianDeskBody.position.z = victorianDesk.position.z
+    world.addBody(vicorianDeskBody)
+
+    victorianDesk.children[0].draggable = true;
+
+    objects.push(victorianDesk);
+
+    mixer = new THREE.AnimationMixer(victorianDesk);
 }, undefined, function (error) {
     console.error(error);
 });
@@ -137,8 +167,6 @@ camera.position.set(0, -10, 5);
 
 orbit.update();
 
-const planeGeometry = new THREE.PlaneGeometry(30, 30);
-
 const texture = textureLoader.load(laminate2)
 
 texture.wrapS = THREE.RepeatWrapping;
@@ -146,10 +174,18 @@ texture.wrapT = THREE.RepeatWrapping;
 texture.repeat.x = 10;
 texture.repeat.y = 10;
 
-const planeMaterial = new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide })
-const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-plane.rotation.x = -0.5 * Math.PI;
-plane.receiveShadow = true;
+const planeGeometry = new THREE.PlaneGeometry(30, 30);
+const planeMaterial = new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide });
+const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial)
+planeMesh.rotation.x = -0.5 * Math.PI;
+planeMesh.receiveShadow = true
+scene.add(planeMesh)
+
+const planeShape = new CANNON.Plane()
+const planeBody = new CANNON.Body({ mass: 0 })
+planeBody.addShape(planeShape)
+planeBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2)
+world.addBody(planeBody)
 
 const plane2Geometry = new THREE.PlaneGeometry(30, 15, 30, 15);
 const plane2Material = new THREE.MeshBasicMaterial({
@@ -157,9 +193,8 @@ const plane2Material = new THREE.MeshBasicMaterial({
     side: THREE.DoubleSide
 });
 const plane2 = new THREE.Mesh(plane2Geometry, plane2Material);
-scene.add(plane2);
 plane2.position.set(0, 5, 15);
-scene.add(plane);
+scene.add(plane2);
 
 const plane3Geometry = new THREE.PlaneGeometry(30, 15, 30, 15);
 const plane3Material = new THREE.MeshBasicMaterial({
@@ -252,18 +287,18 @@ gui.add(options, 'armchairChange', [0, 1]).onChange(function (e) {
         scene.remove(armchairs[1]);
         scene.remove(armchairs[0]);
         armchairs[0].position.set(-3, 0, -3);
-        armchairs[0].rotation.y=-1
+        armchairs[0].rotation.y = -1
         scene.add(armchairs[0])
     } else if (e === '1') {
         scene.remove(armchairs[1]);
         scene.remove(armchairs[0]);
         armchairs[1].position.set(-3, 1, -3);
-        armchairs[1].rotation.y=-1
+        armchairs[1].rotation.y = -1
         scene.add(armchairs[1])
     }
 });
 
-const controls = new DragControls(victorianDeskArray, camera, renderer.domElement);
+const controls = new DragControls(objects, camera, renderer.domElement);
 controls.deactivate();
 controls.activate();
 
@@ -274,18 +309,107 @@ window.addEventListener('mousemove', function (e) {
 
 const rayCaster = new THREE.Raycaster();
 
-function animate(time) {
+const physicsFolder = gui.addFolder('Physics')
+physicsFolder.add(world.gravity, 'x', -10.0, 10.0, 0.1)
+physicsFolder.add(world.gravity, 'y', -10.0, 10.0, 0.1)
+physicsFolder.add(world.gravity, 'z', -10.0, 10.0, 0.1)
+physicsFolder.open()
+
+const clock = new THREE.Clock()
+let delta;
+
+function animate() {
+    requestAnimationFrame(animate)
+
     spotLight.angle = options.angle;
     spotLight.penumbra = options.penumbra;
     spotLight.intensity = options.intensity;
 
     rayCaster.setFromCamera(mousePosition, camera);
 
-    renderer.render(scene, camera);
+    delta = clock.getDelta()
+    delta = Math.min(delta, 0.1)
+    world.step(delta)
+
+    if(victorianDesk && victorianDesk.position && victorianDesk.quaternion)
+    {
+        victorianDesk.position.set(
+            vicorianDeskBody.position.x,
+            vicorianDeskBody.position.y,
+            vicorianDeskBody.position.z
+        );
+    
+        victorianDesk.quaternion.set(
+            vicorianDeskBody.quaternion.x,
+            vicorianDeskBody.quaternion.y,
+            vicorianDeskBody.quaternion.z,
+            vicorianDeskBody.quaternion.w
+        );
+    }
+
+    render();
 }
-renderer.setAnimationLoop(animate);
+
+function render() {
+    renderer.render(scene, camera)
+}
+
+animate()
+
 window.addEventListener('resize', function () {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+/*
+function dragModel() {
+    // If 'holding' an model, move the model
+    if (draggableModel) {
+      rayCaster.setFromCamera(moveMouse, camera);
+      const found = rayCaster.intersectObjects(scene.children);
+      if (found.length > 0) {
+        for (let obj3d of found) {
+          if (!obj3d.object.isDraggablee) {
+            draggableModel.position.x = obj3d.point.x;
+            draggableModel.position.z = obj3d.point.z;
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  // Allows user to pick up and drop models on-click events
+  window.addEventListener("click", (event) => {
+    // If 'holding' model on-click, set container to <undefined> to 'drop' the model.
+    if (draggableModel) {
+      draggableModel = undefined;
+      return;
+    }
+  
+    // If NOT 'holding' model on-click, set container to <object> to 'pickup' the model.
+    clickMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    clickMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    rayCaster.setFromCamera(clickMouse, camera);
+    const found = rayCaster.intersectObjects(scene.children, true);
+    if (found.length) {
+      // Cycle upwards through every parent until it reaches the topmost layer
+      // This top layer is the group created by the GLTFLoader function
+      let current = found[0].object;
+      while (current.parent.parent !== null) {
+        current = current.parent;
+      }
+      if (current.isDraggable) {
+        draggableModel = current;
+      }
+    }
+  });
+  
+  // Constantly updates the mouse location for use in `dragModel()`
+  window.addEventListener("mousemove", (event) => {
+    dragModel(); // Updates the model's postion everytime the mouse moves
+    moveMouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    moveMouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  });
+  */
