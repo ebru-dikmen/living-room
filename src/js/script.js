@@ -17,10 +17,57 @@ const sofaUrl = new URL('../assets/chesterfield-sofa.glb', import.meta.url);
 const sofa2Url = new URL('../assets/victorian_style_sofa.glb', import.meta.url);
 const windowUrl = new URL('../assets/wooden_window.glb', import.meta.url);
 const tableUrl = new URL('../assets/table.glb', import.meta.url);
+const sofa3Url = new URL('../assets/victorian_lounge_sofa.glb', import.meta.url);
+const televisionunitUrl = new URL('../assets/14835_tv_stand_inlay_version.glb', import.meta.url);
+const victorianDeskUrl = new URL('../assets/victorian_desk_with_props.glb', import.meta.url);
 assetLoader.load(diningRoomUrl.href, function (gltf) {
     const model = gltf.scene;
     scene.add(model);
-    model.position.set(11.25, 2, 0);
+    model.scale.x = 2
+    model.scale.y = 2
+    model.scale.z = 2
+    model.position.set(8, 3, 0);
+
+    mixer = new THREE.AnimationMixer(model);
+}, undefined, function (error) {
+    console.error(error);
+});
+
+assetLoader.load(sofa3Url.href, function (gltf) {
+    const model = gltf.scene;
+    scene.add(model);
+    model.scale.x = 3
+    model.scale.y = 3
+    model.scale.z = 3
+    model.position.set(-11, 1.5, 0);
+
+    mixer = new THREE.AnimationMixer(model);
+}, undefined, function (error) {
+    console.error(error);
+});
+
+assetLoader.load(televisionunitUrl.href, function (gltf) {
+    const model = gltf.scene;
+    scene.add(model);
+    model.scale.x = 0.003
+    model.scale.y = 0.003
+    model.scale.z = 0.003
+    model.position.set(-7, 0, -8);
+
+    mixer = new THREE.AnimationMixer(model);
+}, undefined, function (error) {
+    console.error(error);
+});
+let victorianDeskArray = [];
+
+assetLoader.load(victorianDeskUrl.href, function (gltf) {
+    const model = gltf.scene;
+    scene.add(model);
+    model.scale.x = 2
+    model.scale.y = 2
+    model.scale.z = 2
+    model.position.set(-9, 0, 9);
+    victorianDeskArray.push(model);
 
     mixer = new THREE.AnimationMixer(model);
 }, undefined, function (error) {
@@ -33,7 +80,6 @@ assetLoader.load(windowUrl.href, function (gltf) {
     //model.rotation.y = -1 ;
     model.position.set(0, 2, 15);
 
-
     mixer = new THREE.AnimationMixer(model);
 }, undefined, function (error) {
     console.error(error);
@@ -42,22 +88,27 @@ assetLoader.load(tableUrl.href, function (gltf) {
     const model = gltf.scene;
     scene.add(model);
     //model.rotation.y = -1 ;
-    model.position.set(0, 0, -7,5);
-
+    model.position.set(-8, 0, 0);
+    model.scale.x = 0.50
+    model.scale.y = 0.50
+    model.scale.z = 0.50
 
     mixer = new THREE.AnimationMixer(model);
 }, undefined, function (error) {
     console.error(error);
 });
 
-
-let armchairUrls = [armchairUrl, chairUrl, sofaUrl, sofa2Url];
+let armchairUrls = [armchairUrl, sofaUrl];
 
 let armchairs = [];
 
 for (let armchairUrl of armchairUrls) {
     assetLoader.load(armchairUrl.href, function (gltf) {
         const model = gltf.scene;
+        model.scale.x = 2
+        model.scale.y = 2
+        model.scale.z = 2
+        model.position.set(-5, 0, -4);
         armchairs.push(model);
 
         mixer = new THREE.AnimationMixer(model);
@@ -166,6 +217,8 @@ const options = {
     armchairChange: 1,
     plane2Color: '#ffea00',
     plane3Color: '#ffea00',
+    plane4Color: '#ffea00',
+    plane5Color: '#ffea00',
     wireframe: false,
     angle: 0.2,
     penumbra: 0,
@@ -185,37 +238,32 @@ gui.addColor(options, 'plane2Color').onChange(function (e) {
 gui.addColor(options, 'plane3Color').onChange(function (e) {
     plane3.material.color.set(e);
 });
+gui.addColor(options, 'plane4Color').onChange(function (e) {
+    plane4.material.color.set(e);
+});
 
-gui.add(options, 'armchairChange', [0, 1, 2, 3]).onChange(function (e) {
+gui.addColor(options, 'plane5Color').onChange(function (e) {
+    plane5.material.color.set(e);
+});
+
+gui.add(options, 'armchairChange', [0, 1]).onChange(function (e) {
+
     if (e == '0') {
         scene.remove(armchairs[1]);
-        scene.remove(armchairs[2]);
-        scene.remove(armchairs[3]);
-        armchairs[0].position.set(0, 0.50, 0);
+        scene.remove(armchairs[0]);
+        armchairs[0].position.set(-3, 0, -3);
+        armchairs[0].rotation.y=-1
         scene.add(armchairs[0])
     } else if (e === '1') {
+        scene.remove(armchairs[1]);
         scene.remove(armchairs[0]);
-        scene.remove(armchairs[2]);
-        scene.remove(armchairs[3]);
-        armchairs[1].position.set(0, 0.50, 0);
+        armchairs[1].position.set(-3, 1, -3);
+        armchairs[1].rotation.y=-1
         scene.add(armchairs[1])
-    } else if (e === '2') {
-        scene.remove(armchairs[0]);
-        scene.remove(armchairs[1]);
-        scene.remove(armchairs[3]);
-        armchairs[2].position.set(0, 0.55, 0);
-        scene.add(armchairs[2])
-    } else if (e === '3') {
-        scene.remove(armchairs[0]);
-        scene.remove(armchairs[1]);
-        scene.remove(armchairs[2]);
-        armchairs[3].rotation.y = -0.5;
-        armchairs[3].position.set(0, 0.50, 0);
-        scene.add(armchairs[3])
     }
 });
 
-const controls = new DragControls(armchairs, camera, renderer.domElement);
+const controls = new DragControls(victorianDeskArray, camera, renderer.domElement);
 controls.deactivate();
 controls.activate();
 
@@ -235,9 +283,7 @@ function animate(time) {
 
     renderer.render(scene, camera);
 }
-
 renderer.setAnimationLoop(animate);
-
 window.addEventListener('resize', function () {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
